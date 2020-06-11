@@ -1,15 +1,25 @@
 {
-  "name": "brunjoprivacy",
-  "version": "1.0.0",
-  "description": "Online implementation of privacy Game",
-  "main": "Server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "socket.io": "^2.3.0"
-  }
+    "name": "brunjoprivacy",
+    "version": "1.0.0",
+    "description": "Online implementation of privacy Game",
+    "main": "Server.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "npx eslint **/*.js --ignore-pattern node_modules/ && node server.js",
+        "lint": "npx eslint **/*.js --ignore-pattern node_modules/",
+        "debug": "nodemon server",
+        "test": "mocha"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "express": "^4.17.1",
+        "nodemon": "^2.0.4",
+        "random-number": "0.0.9",
+        "socket.io": "^2.3.0"
+    },
+    "devDependencies": {
+        "@types/node": "^14.0.11",
+        "eslint": "^7.1.0"
+    }
 }
