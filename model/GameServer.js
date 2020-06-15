@@ -11,11 +11,11 @@ class GameServer {
      */
     createGame() {
         let game = new GameClass();
-        while (this.GameList.has(game.GameID)) {
-            game.GameID++;
+        while (this.GameList.has(game.id)) {
+            game.id++;
         }
-        this.GameList.set(game.GameID, game);
-        return game.GameID;
+        this.GameList.set(game.id, game);
+        return game.id;
     }
 
     /**
@@ -24,10 +24,13 @@ class GameServer {
      * @returns unique id if found, false if not found
      */
     findGame(gameID) {
-        if (this.GameList.has(gameID)) {
-            return this.GameList.get(gameID);
+        let gameIdInt = parseInt(gameID);
+        if (this.GameList.has(gameIdInt)) {
+            return this.GameList.get(gameIdInt);
         } else {
-            throw new Error("Das Spiel wurde nicht gefunden");
+            let e = new Error("Das Spiel wurde nicht gefunden");
+            e.name = "GameNotFound";
+            throw e;
         }
     }
 
@@ -36,6 +39,9 @@ class GameServer {
      *
      * @returns boolean wether successful or not
      */
-    deleteGame() {}
+    deleteGame(gameId) {
+        console.log("Game was deleted");
+        this.GameList.delete(gameId);
+    }
 }
 module.exports = GameServer;

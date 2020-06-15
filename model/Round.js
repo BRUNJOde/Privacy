@@ -17,19 +17,25 @@ class Round {
     savePlayerEstimation(player, estimation) {
         if (this.playerMap.has(player.id)) {
             this.playerMap.get(player.id).estimation = estimation;
-            return true;
+            return this.checkIfAllPlayerHaveAnswered();
         } else {
-            return false;
+            throw new Error("Spieler gehört nicht zum Spiel");
         }
+    }
+
+    checkIfAllPlayerHaveAnswered() {
+        let allHaveAnswered = true;
+        this.playerMap.forEach((value) => {
+            if (value.estimation == null) {
+                allHaveAnswered = false;
+            }
+        });
+        return allHaveAnswered;
     }
 
     resolveRound() {
         this.aggregateNumberOfYes();
         this.getDifferencesBetweenEstimationAndRealNumber();
-        return {
-            numberOfYes: this.numberOfYes,
-            playerList: this.mapToList(),
-        };
     }
 
     getDifferencesBetweenEstimationAndRealNumber() {
@@ -50,18 +56,6 @@ class Round {
                 this.numberOfYes++;
             }
         });
-    }
-
-    mapToList() {
-        let playerListTemp = [];
-        this.playerMap.forEach((value) => {
-            playerListTemp.push({
-                playerName: value.playerName,
-                estimation: value.estimation,
-                difference: value.difference,
-            });
-        });
-        return playerListTemp;
     }
 }
 module.exports = Round;

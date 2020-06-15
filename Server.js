@@ -10,40 +10,212 @@ http.listen(port, function () {
 var io = require("socket.io")(http);
 //End server init
 
-let Composer = require("Composer")();
+let ComposerClass = require("./model/Composer");
+let Composer = new ComposerClass();
 
 //Socket IO Communication
 io.on("connection", (socket) => {
+    socket.emit("PingPong", {
+        state: 200,
+    });
+    console.log("User connected " + socket.id);
     socket.on("CreateGame", (playerName) => {
         socket.playerName = playerName;
-        let gameId = Composer.createGame(socket);
-        sendEventToPlayer(socket.id, "CreateGame", {
-            state: 200,
-            gameId: gameId,
-            playerList: playerList,
-        });
+        try {
+            let gameInfo = Composer.createGame(socket);
+            sendEventToPlayer(socket.id, "CreateGame", {
+                state: 200,
+                gameInfo: gameInfo,
+            });
+            //Joins Game Socket.io room
+            socket.join(gameInfo.id);
+            socket.gameId = gameInfo.id;
+        } catch (error) {
+            console.log(error.stack);
+            sendEventToPlayer(socket.id, "CreateGame", {
+                state: 400,
+                msg: error.message,
+            });
+        }
     });
 
     socket.on("JoinGame", (joinGameObject) => {
         let playerName = joinGameObject.playerName;
         let gameId = joinGameObject.gameId;
         socket.playerName = playerName;
-        let playerList = joinGame(gameId, socket);
-        if (playerList) {
-            sendEventToPlayer(socket.id, "JoinGame", {
+        try {
+            let playerList = Composer.joinGame(gameId, socket);
+            let game = Composer.getGame(gameId);
+            if (playerList) {
+                sendEventToPlayer(socket.id, "JoinGame", {
+                    state: 200,
+                    gameInfo: game.getGameInfo(),
+                });
+                socket.gameId = game.id;
+            }
+            //Joins Game Socket.io room
+            socket.join(gameId);
+            sendEventToPlayer(gameId, "GameUpdate", {
                 state: 200,
-                gameId: gameId,
-                playerList: playerList,
+                gameInfo: game.getGameInfo(),
+            });
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+            sendEventToPlayer(socket.id, "JoinGame", {
+                state: 400,
+                msg: error.message,
             });
         }
     });
+    socket.on("StartRound", (roundStartInfo) => {
+        let gameId = roundStartInfo.gameId;
+        try {
+            let game = Composer.getGame(gameId);
+            Composer.startRound(gameId, socket);
+            sendEventToPlayer(gameId, "GameUpdate", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+        }
+    });
+
+    socket.on("SendAnswer", (answer) => {
+        var gameId = socket.gameId;
+        try {
+            let game = Composer.getGame(gameId);
+            Composer.saveAnswer(gameId, socket, answer);
+            sendEventToPlayer(socket.id, "SendAnswer", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+            sendEventToPlayer(gameId, "GameUpdate", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+            sendEventToPlayer(socket.id, "SendAnswer", {
+                state: 400,
+                msg: "Deine Antwort konnte nicht gespeichert werden",
+            });
+        }
+    });
+
+    socket.on("PingPong", (gameIdOfPlayer) => {
+        try {
+            if (gameIdOfPlayer != null) {
+                let game = Composer.getGame(gameIdOfPlayer);
+                game.hasPlayer(socket);
+                sendEventToPlayer(socket.id, "PingPong", {
+                    state: 200,
+                    gameInfo: game.getGameInfo(),
+                });
+            } else {
+                sendEventToPlayer(socket.id, "PingPong", {
+                    state: 200,
+                });
+            }
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+            socket.leave(gameIdOfPlayer);
+            let message = () => {
+                switch (error.name) {
+                    case "PlayerNotFound":
+                        return "Deine Internetverbindung war unterbrochen, bitte trete dem Spiel neu bei";
+                    case "GameNotFound":
+                        return "Dein Spiel wurde nicht mehr gefunden, bitte erstelle ein neues";
+                    default:
+                        return "Unbekannter Fehler, bitte erstelle ein neues Spiel";
+                }
+            };
+            sendEventToPlayer(socket.id, "PingPong", {
+                state: 400,
+                msg: message(),
+            });
+        }
+    });
+
+    socket.on("SendEstimation", (answer) => {
+        var gameId = socket.gameId;
+        try {
+            let game = Composer.getGame(gameId);
+            Composer.saveEstimation(gameId, socket, answer);
+            sendEventToPlayer(socket.id, "SendEstimation", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+            sendEventToPlayer(gameId, "GameUpdate", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+            sendEventToPlayer(socket.id, "SendEstimation", {
+                state: 400,
+                msg: "Deine Antwort konnte nicht gespeichert werden",
+            });
+        }
+    });
+
+    socket.on("ResolveRound", () => {
+        var gameId = socket.gameId;
+        try {
+            let game = Composer.getGame(gameId);
+            Composer.resolveByUser(gameId, socket);
+            sendEventToPlayer(gameId, "GameUpdate", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+            sendEventToPlayer(socket.id, "SendEstimation", {
+                state: 400,
+                msg: "Die Runde konnte nicht resolved werden",
+            });
+        }
+    });
+
+    socket.on("LeaveGame", () => {
+        try {
+            let gameId = socket.gameId;
+            let game = Composer.getGame(gameId);
+            let response = Composer.removePlayerFromGame(gameId, socket);
+            if (game.getGameInfo().playerList.length > 0)
+                sendEventToPlayer(game.admin.id, "YouAreAdmin");
+            socket.leave(gameId);
+            sendEventToPlayer(socket.id, "LeaveGame", {
+                state: 200,
+            });
+            sendEventToPlayer(gameId, "GameUpdate", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+        }
+    });
+
+    socket.on("disconnect", () => {
+        try {
+            console.log("Player disconected");
+            let gameId = socket.gameId;
+            if (gameId != null) {
+                let game = Composer.getGame(gameId);
+                let response = Composer.removePlayerFromGame(gameId, socket);
+                sendEventToPlayer(game.admin.id, "YouAreAdmin");
+                socket.leave(gameId);
+                sendEventToPlayer(gameId, "GameUpdate", {
+                    state: 200,
+                    gameInfo: game.getGameInfo(),
+                });
+            }
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+        }
+    });
 });
-
-io.on("StartRound", (socket) => {});
-
-io.on("AnswerQuestion", (socket) => {});
-
-io.on("SendEstimation", (socket) => {});
 
 io.on("EndRound", (socket) => {});
 //End Socket Io Communication

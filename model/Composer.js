@@ -18,7 +18,7 @@ class Composer {
         let game = this.GameServer.findGame(gameId);
         game.admin = player;
         let playerList = this.joinGame(gameId, player);
-        return gameId;
+        return game.getGameInfo();
     }
 
     /**
@@ -41,6 +41,14 @@ class Composer {
         return game;
     }
 
+    removePlayerFromGame(gameId, player) {
+        let game = this.getGame(gameId);
+        let lastPlayerRemoved = game.removePlayer(player);
+        if (lastPlayerRemoved) {
+            this.GameServer.deleteGame(gameId);
+        }
+    }
+
     startRound(
         gameId,
         player,
@@ -57,6 +65,12 @@ class Composer {
         }
     }
 
+    /**
+     *
+     * @param {*} gameId
+     * @param {*} player
+     * @param {*} answer - 1=yes , 2=no
+     */
     saveAnswer(gameId, player, answer) {
         let game = this.GameServer.findGame(gameId);
         let response = game.round.savePlayerAnswer(player, answer);
@@ -65,15 +79,30 @@ class Composer {
 
     saveEstimation(gameId, player, answer) {
         let game = this.GameServer.findGame(gameId);
-        let response = game.round.savePlayerEstimation(player, answer);
-        return response;
+        let allHaveAnswered = game.round.savePlayerEstimation(player, answer);
+        if (allHaveAnswered) {
+            console.log("All have answered");
+            this.resolveRound(gameId);
+        }
     }
 
-    resolveRound(gameId, player) {
+    resolveByUser(gameId, player) {
         let game = this.GameServer.findGame(gameId);
         game.playerIsAdmin(player);
+        this.resolveRound(gameId);
+    }
+
+    resolveRound(gameId) {
+        let game = this.GameServer.findGame(gameId);
         game.hasActiveRound();
         let resolveObject = game.round.resolveRound();
+        console.log(game.round.numberOfYes);
+        game.resolveOfLastRound = {
+            questionText: game.round.questionText,
+            numberOfYes: game.round.numberOfYes,
+            playerList: game.mapToList(),
+        };
+        game.cleanPlayerMap();
         game.round = null;
         return resolveObject;
     }

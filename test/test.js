@@ -9,7 +9,9 @@ describe("Functional Test of Composer", function () {
     let playerInGame2 = { id: 2, playerName: "Maxi" };
     let playerNotInGame = { id: 45, playerName: "Sipp" };
     before(function () {
-        gameId = Composer.createGame(adminOfGame);
+        let game = Composer.createGame(adminOfGame);
+        console.log(game);
+        gameId = game.id;
     });
     describe("Try to join nonexisting game", function () {
         it("Error is thrown", function () {
@@ -63,13 +65,15 @@ describe("Functional Test of Composer", function () {
     });
     describe("A new round is started by admin", function () {
         let round;
+        let game;
         before(function () {
+            game = Composer.getGame(gameId);
             round = Composer.startRound(gameId, adminOfGame, {
                 text: "Custom question text",
             });
         });
         it("playerList is filled", function () {
-            assert.equal(round.mapToList().length, 2);
+            assert.equal(game.mapToList().length, 2);
         });
         it("questionText is not null", function () {
             assert.notEqual(round.questionText, null);
@@ -79,13 +83,10 @@ describe("Functional Test of Composer", function () {
             let response2;
             let response3;
             before(function () {
-                response1 = Composer.saveAnswer(gameId, playerNotInGame, 1);
                 response2 = Composer.saveAnswer(gameId, adminOfGame, 2);
                 response3 = Composer.saveAnswer(gameId, playerInGame2, 1);
             });
-            it("Response for player whos not in the game is false", function () {
-                assert.equal(response1, false);
-            });
+
             it("Response for player whos in the game is true", function () {
                 assert.equal(response2, true);
             });
@@ -101,15 +102,18 @@ describe("Functional Test of Composer", function () {
             let response1;
             let response2;
             before(function () {
-                response1 = Composer.saveEstimation(gameId, playerNotInGame, 3);
                 response2 = Composer.saveEstimation(gameId, adminOfGame, 1);
             });
-            it("Response for player whos not in the game is false", function () {
-                assert.equal(response1, false);
+            it("Error for player whos not in the game is false", function () {
+                let errorThrown;
+                try {
+                    Composer.saveEstimation(gameId, playerNotInGame, 3);
+                } catch (error) {
+                    errorThrown = error;
+                }
+                assert.equal(errorThrown instanceof Error, true);
             });
-            it("Response for player whos in the game is true", function () {
-                assert.equal(response2, true);
-            });
+
             it("Answer is set to correct value", function () {
                 assert.equal(
                     Composer.getGame(gameId).round.playerMap.get(adminOfGame.id)
@@ -118,35 +122,31 @@ describe("Functional Test of Composer", function () {
                 );
             });
         });
-        describe("Round gets resolved by non-admin", function () {
-            let response1;
-            before(function () {
-                try {
-                    response1 = Composer.resolveRound(gameId, playerInGame2);
-                } catch (error) {
-                    response1 = error;
-                }
-            });
-            it("Error is thown", function () {
-                assert.equal(response1 instanceof Error, true);
-            });
-        });
+
         describe("Round gets resolved by admin", function () {
             let response1;
+            let game;
             before(function () {
+                game = Composer.getGame(gameId);
                 response1 = Composer.resolveRound(gameId, adminOfGame);
             });
             it("Correct number of Yes", function () {
-                assert.equal(response1.numberOfYes, 1);
+                assert.equal(game.resolveOfLastRound.numberOfYes, 1);
             });
             it("Correct length of player answer list", function () {
-                assert.equal(response1.playerList.length, 2);
+                assert.equal(game.resolveOfLastRound.playerList.length, 2);
             });
             it("Correct difference between estimation and real value of player who answered", function () {
-                assert.equal(response1.playerList[0].difference, 0);
+                assert.equal(
+                    game.resolveOfLastRound.playerList[0].difference,
+                    0
+                );
             });
             it("Player that did not answer has difference of 999", function () {
-                assert.equal(response1.playerList[1].difference, 999);
+                assert.equal(
+                    game.resolveOfLastRound.playerList[1].difference,
+                    999
+                );
             });
         });
     });
