@@ -10,6 +10,8 @@ http.listen(port, function () {
 var io = require("socket.io")(http);
 //End server init
 
+app.use(express.static(__dirname + "/public"));
+
 let ComposerClass = require("./model/Composer");
 let Composer = new ComposerClass();
 
