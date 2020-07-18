@@ -5,8 +5,7 @@
     "main": "Server.js",
     "scripts": {
         "test": "mocha",
-        "start": "node server.js",
-        "lint": "npx eslint **/*.js --ignore-pattern node_modules/",
+        "start": "node Server.js",
         "debug": "nodemon Server"
     },
     "author": "",
