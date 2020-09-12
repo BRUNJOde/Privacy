@@ -72,12 +72,15 @@ class Composer {
      * @param {*} answer - 1=yes , 2=no
      */
     saveAnswer(gameId, player, answer) {
+        console.log("Save Answer : " + answer);
         let game = this.GameServer.findGame(gameId);
         let response = game.round.savePlayerAnswer(player, answer);
         return response;
     }
 
     saveEstimation(gameId, player, answer) {
+        console.log("Save Estimation : " + answer);
+        console.log("Save Estimation : " + player.id);
         let game = this.GameServer.findGame(gameId);
         let allHaveAnswered = game.round.savePlayerEstimation(player, answer);
         if (allHaveAnswered) {

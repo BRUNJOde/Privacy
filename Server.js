@@ -88,6 +88,7 @@ io.on("connection", (socket) => {
         try {
             let game = Composer.getGame(gameId);
             Composer.saveAnswer(gameId, socket, answer);
+            console.log("Send Answer Successful");
             sendEventToPlayer(socket.id, "SendAnswer", {
                 state: 200,
                 gameInfo: game.getGameInfo(),
