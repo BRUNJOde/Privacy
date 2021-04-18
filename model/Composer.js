@@ -55,7 +55,7 @@ class Composer {
         question = questions[Math.floor(Math.random() * questions.length)]
     ) {
         let game = this.GameServer.findGame(gameId);
-
+        game.cleanPlayerMap();
         if (game.playerIsAdmin(player)) {
             let round = new RoundClass(question.text, game.playerMap);
             game.round = round;
@@ -91,10 +91,24 @@ class Composer {
 
     resolveByUser(gameId, player) {
         let game = this.GameServer.findGame(gameId);
+        game.hasActiveRound();
         game.playerIsAdmin(player);
-        this.resolveRound(gameId);
+        switch (game.round.roundState) {
+            case "Estimation":
+                this.resolveRound(gameId);
+            case "AssignSips":
+                game.round.roundState = "Resolve";
+                break;
+            case "Resolve":
+                this.startRound(gameId, player);
+                break;
+        }
     }
 
+    /**
+     * Resolvt die Schätzungen der Spieler
+     *
+     */
     resolveRound(gameId) {
         let game = this.GameServer.findGame(gameId);
         game.hasActiveRound();
@@ -105,9 +119,26 @@ class Composer {
             numberOfYes: game.round.numberOfYes,
             playerList: game.mapToList(),
         };
-        game.cleanPlayerMap();
-        game.round = null;
         return resolveObject;
+    }
+
+    /*
+    sipAssignment : object {
+        playerName : string 
+        assignedSips : int
+    }
+    */
+    saveSipAssignment(gameId, sipAssignment, player) {
+        //TODO implement function
+        let game = this.GameServer.findGame(gameId);
+        game.hasPlayer(player);
+        let allHaveAssigned = game.round.saveSipAssignment(
+            player,
+            sipAssignment
+        );
+        if (allHaveAssigned) {
+            console.log("all have sips assigned");
+        }
     }
 }
 

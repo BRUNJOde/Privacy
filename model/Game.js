@@ -20,8 +20,16 @@ class Game {
         }
     }
 
-    addPlayer(player) {
-        this.playerMap.set(player.id, player);
+    addPlayer(newPlayer) {
+        this.playerMap.forEach((player, key) => {
+            if (player.playerName === newPlayer.playerName) {
+                throw new Error(
+                    "Dein Spielername existiert bereits in dem Spiel"
+                );
+            }
+        });
+        newPlayer.totalPoints = 0;
+        this.playerMap.set(newPlayer.id, newPlayer);
     }
 
     hasPlayer(player) {
@@ -29,6 +37,22 @@ class Game {
             let e = new Error("Spieler gehört nicht zu Spiel");
             e.name = "PlayerNotFound";
             throw e;
+        }
+    }
+
+    getPlayer(player) {
+        return this.playerMap.get(player.id);
+    }
+
+    getPlayerByName(playerName) {
+        let playerFound = null;
+        this.playerMap.forEach((player, key) => {
+            if (player.playerName === playerName) playerFound = player;
+        });
+        if (playerFound) {
+            return playerFound;
+        } else {
+            throw new Error("Spieler gehört nicht zu Spiel");
         }
     }
 
@@ -48,7 +72,11 @@ class Game {
     cleanPlayerMap() {
         this.playerMap.forEach((value) => {
             value.estimation = null;
+            value.sipsInThisRound = 0;
             value.difference = null;
+            value.answer = null;
+            value.sipsAssigned = null;
+            value.success = null;
         });
     }
 
@@ -61,6 +89,10 @@ class Game {
                 isAdmin: key == this.admin.id,
                 estimation: value.estimation,
                 difference: value.difference,
+                success: value.success,
+                sipsInThisRound: value.sipsInThisRound,
+                sipsAssigned: value.sipsAssigned,
+                totalPoints: value.totalPoints,
             });
         });
 

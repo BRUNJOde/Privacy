@@ -106,6 +106,29 @@ io.on("connection", (socket) => {
         }
     });
 
+    socket.on("SendAssignSips", (assignedSips) => {
+        var gameId = socket.gameId;
+        try {
+            let game = Composer.getGame(gameId);
+            Composer.saveSipAssignment(gameId, assignedSips, socket);
+            console.log("Send SipAssignment Successful");
+            sendEventToPlayer(socket.id, "SendAssignSips", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+            sendEventToPlayer(gameId, "GameUpdate", {
+                state: 200,
+                gameInfo: game.getGameInfo(),
+            });
+        } catch (error) {
+            console.log(error.stack + " --- " + error.message);
+            sendEventToPlayer(socket.id, "SendAssignSips", {
+                state: 400,
+                msg: "Deine Antwort konnte nicht gespeichert werden",
+            });
+        }
+    });
+
     socket.on("PingPong", (gameIdOfPlayer) => {
         try {
             if (gameIdOfPlayer != null) {
